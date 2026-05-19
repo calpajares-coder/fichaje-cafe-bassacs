@@ -7,49 +7,46 @@ import {
 const CLAVE_ADMIN = 'CALPAJARES2026'
 
 document.querySelector('#app').innerHTML = `
-<div style="padding:30px;font-family:Arial;max-width:950px;margin:auto">
+<div style="padding:30px;font-family:Arial;max-width:900px;margin:auto">
   <h1>Fichaje Café Bassacs</h1>
 
-  <section>
-    <h2>Trabajador</h2>
-    <input id="codigo" placeholder="Código trabajador" style="padding:12px;width:100%">
-    <br><br>
-    <button id="entrada">Fichar Entrada</button>
-    <button id="salida">Fichar Salida</button>
-    <p id="mensaje"></p>
-  </section>
+  <h2>Trabajador</h2>
+  <input id="codigo" placeholder="Código trabajador" style="padding:12px;width:100%">
+  <br><br>
+  <button id="entrada">Fichar Entrada</button>
+  <button id="salida">Fichar Salida</button>
+  <p id="mensaje"></p>
 
   <hr>
 
-  <section>
-    <h2>Administrador</h2>
-    <input id="claveAdmin" type="password" placeholder="Clave administrador" style="padding:12px;width:100%">
-    <br><br>
-    <button id="entrarAdmin">Entrar como administrador</button>
+  <h2>Nuevo trabajador</h2>
+  <p>Si es tu primera vez, crea tu código personal.</p>
+  <input id="nuevoNombre" placeholder="Nombre completo" style="padding:12px;width:100%">
+  <br><br>
+  <input id="nuevoCodigo" placeholder="Crea tu código personal" style="padding:12px;width:100%">
+  <br><br>
+  <button id="crearTrabajador">Crear mi código</button>
+  <p id="mensajeRegistro"></p>
 
-    <div id="panelAdmin" style="display:none;margin-top:25px">
-      <h3>Añadir trabajador</h3>
-      <input id="nombreEmpleado" placeholder="Nombre trabajador" style="padding:12px;width:100%">
-      <br><br>
-      <input id="codigoEmpleado" placeholder="Código trabajador" style="padding:12px;width:100%">
-      <br><br>
-      <button id="guardarEmpleado">Guardar trabajador</button>
-      <p id="mensajeEmpleado"></p>
+  <hr>
 
-      <hr>
+  <h2>Administrador</h2>
+  <input id="claveAdmin" type="password" placeholder="Clave administrador" style="padding:12px;width:100%">
+  <br><br>
+  <button id="entrarAdmin">Entrar como administrador</button>
 
-      <h3>Trabajadores guardados</h3>
-      <button id="verEmpleados">Actualizar trabajadores</button>
-      <ul id="listaEmpleados"></ul>
+  <div id="panelAdmin" style="display:none;margin-top:25px">
+    <h3>Trabajadores</h3>
+    <button id="verEmpleados">Ver trabajadores</button>
+    <ul id="listaEmpleados"></ul>
 
-      <hr>
+    <hr>
 
-      <h3>Fichajes</h3>
-      <button id="verFichajes">Ver fichajes</button>
-      <button id="exportarExcel">Descargar Excel / CSV</button>
-      <div id="tablaFichajes" style="margin-top:20px;overflow:auto"></div>
-    </div>
-  </section>
+    <h3>Fichajes</h3>
+    <button id="verFichajes">Ver fichajes</button>
+    <button id="exportarExcel">Descargar Excel / CSV</button>
+    <div id="tablaFichajes" style="margin-top:20px;overflow:auto"></div>
+  </div>
 </div>
 `
 
@@ -64,21 +61,19 @@ async function buscarEmpleado(codigo) {
   return resultado.docs[0].data()
 }
 
-document.getElementById('entrarAdmin').addEventListener('click', () => {
-  const clave = document.getElementById('claveAdmin').value
-  if (clave === CLAVE_ADMIN) {
-    document.getElementById('panelAdmin').style.display = 'block'
-  } else {
-    alert('Clave incorrecta')
-  }
-})
-
-document.getElementById('guardarEmpleado').addEventListener('click', async () => {
-  const nombre = document.getElementById('nombreEmpleado').value.trim()
-  const codigo = document.getElementById('codigoEmpleado').value.trim()
+document.getElementById('crearTrabajador').addEventListener('click', async () => {
+  const nombre = document.getElementById('nuevoNombre').value.trim()
+  const codigo = document.getElementById('nuevoCodigo').value.trim()
 
   if (!nombre || !codigo) {
-    document.getElementById('mensajeEmpleado').innerHTML = 'Falta nombre o código'
+    document.getElementById('mensajeRegistro').innerHTML = 'Falta nombre o código'
+    return
+  }
+
+  const existe = await buscarEmpleado(codigo)
+
+  if (existe) {
+    document.getElementById('mensajeRegistro').innerHTML = 'Este código ya existe'
     return
   }
 
@@ -89,9 +84,19 @@ document.getElementById('guardarEmpleado').addEventListener('click', async () =>
     creado: new Date().toISOString()
   })
 
-  document.getElementById('mensajeEmpleado').innerHTML = 'Trabajador guardado correctamente'
-  document.getElementById('nombreEmpleado').value = ''
-  document.getElementById('codigoEmpleado').value = ''
+  document.getElementById('mensajeRegistro').innerHTML = 'Trabajador creado correctamente'
+  document.getElementById('nuevoNombre').value = ''
+  document.getElementById('nuevoCodigo').value = ''
+})
+
+document.getElementById('entrarAdmin').addEventListener('click', () => {
+  const clave = document.getElementById('claveAdmin').value.trim()
+
+  if (clave === CLAVE_ADMIN) {
+    document.getElementById('panelAdmin').style.display = 'block'
+  } else {
+    alert('Clave incorrecta')
+  }
 })
 
 document.getElementById('verEmpleados').addEventListener('click', async () => {
@@ -110,7 +115,7 @@ document.getElementById('entrada').addEventListener('click', async () => {
   const empleado = await buscarEmpleado(codigo)
 
   if (!empleado) {
-    document.getElementById('mensaje').innerHTML = 'Código no válido'
+    document.getElementById('mensaje').innerHTML = 'Código no válido. Primero crea tu código.'
     return
   }
 
@@ -119,6 +124,7 @@ document.getElementById('entrada').addEventListener('click', async () => {
     where('codigo', '==', codigo),
     where('abierto', '==', true)
   )
+
   const abierto = await getDocs(q)
 
   if (!abierto.empty) {
