@@ -4,53 +4,61 @@ import {
   collection, addDoc, getDocs, query, where, updateDoc, doc
 } from 'firebase/firestore'
 
-const CLAVE_ADMIN = '1234'
+const CLAVE_ADMIN = 'CALPAJARES2026'
 
 document.querySelector('#app').innerHTML = `
-<div style="padding:30px;font-family:Arial;max-width:900px;margin:auto">
+<div style="padding:30px;font-family:Arial;max-width:950px;margin:auto">
   <h1>Fichaje Café Bassacs</h1>
 
-  <h2>Trabajador</h2>
-  <input id="codigo" placeholder="Código trabajador" style="padding:12px;width:100%">
-  <br><br>
-  <button id="entrada">Fichar Entrada</button>
-  <button id="salida">Fichar Salida</button>
-  <p id="mensaje"></p>
+  <section>
+    <h2>Trabajador</h2>
+    <input id="codigo" placeholder="Código trabajador" style="padding:12px;width:100%">
+    <br><br>
+    <button id="entrada">Fichar Entrada</button>
+    <button id="salida">Fichar Salida</button>
+    <p id="mensaje"></p>
+  </section>
 
   <hr>
 
-  <h2>Administrador</h2>
-  <input id="claveAdmin" type="password" placeholder="Clave administrador" style="padding:12px;width:100%">
-  <br><br>
-  <button id="entrarAdmin">Entrar como administrador</button>
-
-  <div id="panelAdmin" style="display:none;margin-top:20px">
-    <h3>Añadir empleado</h3>
-    <input id="nombreEmpleado" placeholder="Nombre empleado" style="padding:12px;width:100%">
+  <section>
+    <h2>Administrador</h2>
+    <input id="claveAdmin" type="password" placeholder="Clave administrador" style="padding:12px;width:100%">
     <br><br>
-    <input id="codigoEmpleado" placeholder="Código empleado" style="padding:12px;width:100%">
-    <br><br>
-    <button id="guardarEmpleado">Guardar empleado</button>
-    <p id="mensajeEmpleado"></p>
+    <button id="entrarAdmin">Entrar como administrador</button>
 
-    <hr>
+    <div id="panelAdmin" style="display:none;margin-top:25px">
+      <h3>Añadir trabajador</h3>
+      <input id="nombreEmpleado" placeholder="Nombre trabajador" style="padding:12px;width:100%">
+      <br><br>
+      <input id="codigoEmpleado" placeholder="Código trabajador" style="padding:12px;width:100%">
+      <br><br>
+      <button id="guardarEmpleado">Guardar trabajador</button>
+      <p id="mensajeEmpleado"></p>
 
-    <h3>Empleados</h3>
-    <button id="verEmpleados">Ver empleados</button>
-    <ul id="listaEmpleados"></ul>
+      <hr>
 
-    <hr>
+      <h3>Trabajadores guardados</h3>
+      <button id="verEmpleados">Actualizar trabajadores</button>
+      <ul id="listaEmpleados"></ul>
 
-    <h3>Fichajes</h3>
-    <button id="verFichajes">Ver fichajes</button>
-    <button id="exportarExcel">Descargar Excel/CSV</button>
-    <div id="tablaFichajes"></div>
-  </div>
+      <hr>
+
+      <h3>Fichajes</h3>
+      <button id="verFichajes">Ver fichajes</button>
+      <button id="exportarExcel">Descargar Excel / CSV</button>
+      <div id="tablaFichajes" style="margin-top:20px;overflow:auto"></div>
+    </div>
+  </section>
 </div>
 `
 
 async function buscarEmpleado(codigo) {
-  const q = query(collection(db, 'empleados'), where('codigo', '==', codigo), where('activo', '==', true))
+  const q = query(
+    collection(db, 'empleados'),
+    where('codigo', '==', codigo),
+    where('activo', '==', true)
+  )
   const resultado = await getDocs(q)
   if (resultado.empty) return null
   return resultado.docs[0].data()
@@ -74,8 +82,16 @@ document.getElementById('guardarEmpleado').addEventListener('click', async () =>
     return
   }
 
-  await addDoc(collection(db, 'empleados'), { nombre, codigo, activo: true })
-  document.getElementById('mensajeEmpleado').innerHTML = 'Empleado guardado correctamente'
+  await addDoc(collection(db, 'empleados'), {
+    nombre,
+    codigo,
+    activo: true,
+    creado: new Date().toISOString()
+  })
+
+  document.getElementById('mensajeEmpleado').innerHTML = 'Trabajador guardado correctamente'
+  document.getElementById('nombreEmpleado').value = ''
+  document.getElementById('codigoEmpleado').value = ''
 })
 
 document.getElementById('verEmpleados').addEventListener('click', async () => {
@@ -85,7 +101,7 @@ document.getElementById('verEmpleados').addEventListener('click', async () => {
 
   resultado.forEach((docu) => {
     const e = docu.data()
-    lista.innerHTML += `<li><strong>${e.nombre}</strong> - Código: ${e.codigo}</li>`
+    lista.innerHTML += `<li><strong>${e.nombre}</strong> — Código: ${e.codigo}</li>`
   })
 })
 
@@ -95,6 +111,18 @@ document.getElementById('entrada').addEventListener('click', async () => {
 
   if (!empleado) {
     document.getElementById('mensaje').innerHTML = 'Código no válido'
+    return
+  }
+
+  const q = query(
+    collection(db, 'FICHAJES'),
+    where('codigo', '==', codigo),
+    where('abierto', '==', true)
+  )
+  const abierto = await getDocs(q)
+
+  if (!abierto.empty) {
+    document.getElementById('mensaje').innerHTML = 'Ya tienes una entrada abierta'
     return
   }
 
@@ -109,12 +137,20 @@ document.getElementById('entrada').addEventListener('click', async () => {
     })
 
     document.getElementById('mensaje').innerHTML = 'Entrada registrada correctamente'
+  }, () => {
+    document.getElementById('mensaje').innerHTML = 'Debes permitir la ubicación'
   })
 })
 
 document.getElementById('salida').addEventListener('click', async () => {
   const codigo = document.getElementById('codigo').value.trim()
-  const q = query(collection(db, 'FICHAJES'), where('codigo', '==', codigo), where('abierto', '==', true))
+
+  const q = query(
+    collection(db, 'FICHAJES'),
+    where('codigo', '==', codigo),
+    where('abierto', '==', true)
+  )
+
   const resultado = await getDocs(q)
 
   if (resultado.empty) {
@@ -123,32 +159,54 @@ document.getElementById('salida').addEventListener('click', async () => {
   }
 
   const fichajeDoc = resultado.docs[0]
+  const entrada = fichajeDoc.data()
 
   navigator.geolocation.getCurrentPosition(async (pos) => {
+    const fechaSalida = new Date()
+    const fechaEntrada = new Date(entrada.fechaEntrada)
+    const horas = ((fechaSalida - fechaEntrada) / 1000 / 60 / 60).toFixed(2)
+
     await updateDoc(doc(db, 'FICHAJES', fichajeDoc.id), {
-      fechaSalida: new Date().toISOString(),
+      fechaSalida: fechaSalida.toISOString(),
       latitudSalida: pos.coords.latitude,
       longitudSalida: pos.coords.longitude,
+      horasTrabajadas: horas,
       abierto: false
     })
 
-    document.getElementById('mensaje').innerHTML = 'Salida registrada correctamente'
+    document.getElementById('mensaje').innerHTML = `Salida registrada. Horas: ${horas}`
+  }, () => {
+    document.getElementById('mensaje').innerHTML = 'Debes permitir la ubicación'
   })
 })
 
 async function cargarFichajes() {
   const resultado = await getDocs(collection(db, 'FICHAJES'))
-  let html = `<table border="1" cellpadding="8"><tr><th>Nombre</th><th>Código</th><th>Entrada</th><th>Salida</th><th>Abierto</th></tr>`
+
+  let html = `
+  <table border="1" cellpadding="8" style="border-collapse:collapse;width:100%">
+    <tr>
+      <th>Nombre</th>
+      <th>Código</th>
+      <th>Entrada</th>
+      <th>Salida</th>
+      <th>Horas</th>
+      <th>Abierto</th>
+    </tr>
+  `
 
   resultado.forEach((docu) => {
     const f = docu.data()
-    html += `<tr>
-      <td>${f.nombre || ''}</td>
-      <td>${f.codigo || ''}</td>
-      <td>${f.fechaEntrada || ''}</td>
-      <td>${f.fechaSalida || ''}</td>
-      <td>${f.abierto ? 'Sí' : 'No'}</td>
-    </tr>`
+    html += `
+      <tr>
+        <td>${f.nombre || ''}</td>
+        <td>${f.codigo || ''}</td>
+        <td>${f.fechaEntrada || ''}</td>
+        <td>${f.fechaSalida || ''}</td>
+        <td>${f.horasTrabajadas || ''}</td>
+        <td>${f.abierto ? 'Sí' : 'No'}</td>
+      </tr>
+    `
   })
 
   html += `</table>`
@@ -160,11 +218,11 @@ document.getElementById('verFichajes').addEventListener('click', cargarFichajes)
 document.getElementById('exportarExcel').addEventListener('click', async () => {
   const resultado = await getDocs(collection(db, 'FICHAJES'))
 
-  let csv = 'Nombre;Codigo;Entrada;Salida;Latitud entrada;Longitud entrada;Latitud salida;Longitud salida;Abierto\\n'
+  let csv = 'Nombre;Codigo;Entrada;Salida;Horas;Latitud Entrada;Longitud Entrada;Latitud Salida;Longitud Salida;Abierto\n'
 
   resultado.forEach((docu) => {
     const f = docu.data()
-    csv += `${f.nombre || ''};${f.codigo || ''};${f.fechaEntrada || ''};${f.fechaSalida || ''};${f.latitudEntrada || ''};${f.longitudEntrada || ''};${f.latitudSalida || ''};${f.longitudSalida || ''};${f.abierto ? 'SI' : 'NO'}\\n`
+    csv += `${f.nombre || ''};${f.codigo || ''};${f.fechaEntrada || ''};${f.fechaSalida || ''};${f.horasTrabajadas || ''};${f.latitudEntrada || ''};${f.longitudEntrada || ''};${f.latitudSalida || ''};${f.longitudSalida || ''};${f.abierto ? 'SI' : 'NO'}\n`
   })
 
   const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' })
